@@ -48,13 +48,32 @@ function escapeCSV(val) {
     : str;
 }
 
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '';
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQuote = !inQuote;
+    } else if (c === ',' && !inQuote) {
+      result.push(cur); cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
 function parseCSV(content) {
   const lines = content.trim().split('\n');
-  const headers = lines[0].split(',');
+  const headers = parseCSVLine(lines[0]);
   const rows = {};
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
-    const cols = lines[i].split(',');
+    const cols = parseCSVLine(lines[i]);
     const key = cols[0] + '|' + cols[1];
     rows[key] = cols;
   }
@@ -85,23 +104,25 @@ async function main() {
     // 오늘 수집 데이터 맵
     const todayMap = {};
     allItems.forEach((item, idx) => {
-      const title = escapeCSV(cleanTitle(item.title));
-      const brand = escapeCSV(item.brand || item.mallName || '');
-      const key = title + '|' + brand;
+      const title = cleanTitle(item.title);
+      const brand = item.brand || item.mallName || '';
+      const key = escapeCSV(title) + '|' + escapeCSV(brand);
       todayMap[key] = {
         rank: idx + 1,
-        title,
-        brand,
+        title: escapeCSV(title),
+        brand: escapeCSV(brand),
         price: item.lprice,
         link: escapeCSV(item.link)
       };
     });
 
-    // 저장 경로: data/history/nrank_{category}.csv
+    // 저장 경로
     const historyDir = path.join(__dirname, '../data/history');
     if (!fs.existsSync(historyDir)) fs.mkdirSync(historyDir, { recursive: true });
     const csvFile = path.join(historyDir, `nrank_${CATEGORY}.csv`);
 
+    // 고정 컬럼: title, brand, price, link (4개)
+    const FIXED_COLS = 4;
     let headers = ['title', 'brand', 'price', 'link'];
     let rows = {};
 
@@ -113,9 +134,13 @@ async function main() {
       console.log(`기존 데이터 로드: ${Object.keys(rows).length}개 상품`);
     }
 
-    // 날짜 컬럼 추가
+    // 날짜 컬럼을 고정 컬럼 바로 뒤(index 4)에 삽입 (최신이 앞)
     if (!headers.includes(dateStr)) {
-      headers.push(dateStr);
+      headers.splice(FIXED_COLS, 0, dateStr);
+      // 기존 행에도 동일 위치에 빈 칸 삽입
+      Object.keys(rows).forEach(key => {
+        rows[key].splice(FIXED_COLS, 0, '');
+      });
       console.log(`날짜 컬럼 추가: ${dateStr}`);
     }
 
