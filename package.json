@@ -1,0 +1,8 @@
+{
+  "name": "naver-ranking",
+  "version": "2.0.0",
+  "description": "네이버 쇼핑 키워드 브랜드 순위 수집",
+  "scripts": {
+    "search": "node scripts/search.js"
+  }
+}
