@@ -137,7 +137,6 @@ async function main() {
     // 날짜 컬럼을 고정 컬럼 바로 뒤(index 4)에 삽입 (최신이 앞)
     if (!headers.includes(dateStr)) {
       headers.splice(FIXED_COLS, 0, dateStr);
-      // 기존 행에도 동일 위치에 빈 칸 삽입
       Object.keys(rows).forEach(key => {
         rows[key].splice(FIXED_COLS, 0, '');
       });
@@ -172,13 +171,13 @@ async function main() {
       }
     });
 
-    // CSV 저장
+    // CSV 저장 (BOM 추가로 엑셀 한글 깨짐 방지)
     const csvContent = [
       headers.join(','),
       ...Object.values(rows).map(r => r.join(','))
     ].join('\n');
 
-    fs.writeFileSync(csvFile, csvContent);
+    fs.writeFileSync(csvFile, '\uFEFF' + csvContent);
     console.log(`저장 완료: data/history/nrank_${CATEGORY}.csv`);
     console.log(`총 ${Object.keys(rows).length}개 상품 누적`);
 
