@@ -1,1 +1,59 @@
-1
+name: 네이버 쇼핑 브랜드 순위 수집
+
+on:
+  schedule:
+    - cron: '0 23 * * *'  # 매일 오전 8시 KST
+  workflow_dispatch:
+    inputs:
+      keyword:
+        description: '검색 키워드 (예: 모니터, 키보드)'
+        required: true
+        default: '모니터'
+      brand:
+        description: '찾을 브랜드 (예: 한성컴퓨터)'
+        required: false
+        default: ''
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: 브랜드 순위 수집
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          SEARCH_KEYWORD: ${{ github.event.inputs.keyword || '모니터' }}
+          TARGET_BRAND: ${{ github.event.inputs.brand || '' }}
+        run: node scripts/search.js
+
+      - name: 결과 확인
+        run: cat output/ranking.json
+
+      - name: 결과 파일 저장
+        uses: actions/upload-artifact@v4
+        with:
+          name: ranking-result
+          path: output/ranking.json
+          retention-days: 7
+
+      - name: OCI 서버로 결과 전송
+        env:
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+        run: |
+          if [ -n "$SERVER_URL" ]; then
+            curl -X POST "$SERVER_URL/api/naver/ranking" \
+              -H "Content-Type: application/json" \
+              -d @output/ranking.json
+          fi
