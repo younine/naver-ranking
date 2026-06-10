@@ -2,17 +2,17 @@ name: 네이버 쇼핑 브랜드 순위 수집
 
 on:
   schedule:
-    - cron: '0 23 * * *'  # 매일 오전 8시 KST
+    - cron: '30 23 * * *'
   workflow_dispatch:
     inputs:
       keyword:
         description: '검색 키워드 (예: 모니터, 키보드)'
         required: true
         default: '모니터'
-      brand:
-        description: '찾을 브랜드 (예: 한성컴퓨터)'
-        required: false
-        default: ''
+      category:
+        description: '카테고리 영문명 (예: monitor, keyboard, tv)'
+        required: true
+        default: 'monitor'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -35,25 +35,13 @@ jobs:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           SEARCH_KEYWORD: ${{ github.event.inputs.keyword || '모니터' }}
-          TARGET_BRAND: ${{ github.event.inputs.brand || '' }}
+          SEARCH_CATEGORY: ${{ github.event.inputs.category || 'monitor' }}
         run: node scripts/search.js
 
-      - name: 결과 확인
-        run: cat output/ranking.json
-
-      - name: 결과 파일 저장
-        uses: actions/upload-artifact@v4
-        with:
-          name: ranking-result
-          path: output/ranking.json
-          retention-days: 7
-
-      - name: OCI 서버로 결과 전송
-        env:
-          SERVER_URL: ${{ secrets.SERVER_URL }}
+      - name: CSV 커밋 및 푸시
         run: |
-          if [ -n "$SERVER_URL" ]; then
-            curl -X POST "$SERVER_URL/api/naver/ranking" \
-              -H "Content-Type: application/json" \
-              -d @output/ranking.json
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "data: $(date +'%Y-%m-%d') 순위 업데이트"
+          git push
