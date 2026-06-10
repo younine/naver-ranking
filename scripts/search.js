@@ -43,7 +43,6 @@ function naverSearch(query, start = 1, display = 100) {
 }
 
 function extractBrand(item) {
-  // 브랜드 추출: brand 필드 또는 mallName 또는 title에서 추출
   return item.brand || item.mallName || '';
 }
 
@@ -56,19 +55,19 @@ async function main() {
   console.log(`찾을 브랜드: ${TARGET_BRAND || '전체'}`);
 
   try {
-    // 최대 300개 수집 (3페이지)
+    // 300개 수집 (3페이지)
     let allItems = [];
     for (let start = 1; start <= 201; start += 100) {
       const result = await naverSearch(KEYWORD, start, 100);
       if (!result.items || result.items.length === 0) break;
       allItems = allItems.concat(result.items);
       console.log(`${start}~${start + result.items.length - 1}번째 상품 수집 완료`);
-      await new Promise(r => setTimeout(r, 300)); // 딜레이
+      await new Promise(r => setTimeout(r, 300));
     }
 
     console.log(`총 ${allItems.length}개 상품 수집`);
 
-    // 브랜드별 순위 집계
+    // 브랜드별 순위 집계 (전체 상품 저장)
     const brandRanks = {};
     allItems.forEach((item, idx) => {
       const brand = extractBrand(item);
@@ -83,14 +82,12 @@ async function main() {
         };
       }
       brandRanks[brand].count++;
-      if (brandRanks[brand].products.length < 3) {
-        brandRanks[brand].products.push({
-          rank: idx + 1,
-          title: cleanTitle(item.title),
-          price: item.lprice,
-          link: item.link,
-        });
-      }
+      brandRanks[brand].products.push({
+        rank: idx + 1,
+        title: cleanTitle(item.title),
+        price: item.lprice,
+        link: item.link,
+      });
     });
 
     // 첫 등장 순위 기준으로 정렬
@@ -108,6 +105,10 @@ async function main() {
         console.log(`\n[${TARGET_BRAND}] 브랜드 순위: ${targetResult.brandRank}위`);
         console.log(`첫 노출 상품 순위: ${targetResult.firstRank}위`);
         console.log(`노출 상품 수: ${targetResult.count}개`);
+        console.log('상품 목록:');
+        targetResult.products.forEach(p => {
+          console.log(`  ${p.rank}위: ${p.title} (${parseInt(p.price).toLocaleString()}원)`);
+        });
       } else {
         console.log(`[${TARGET_BRAND}] 브랜드가 결과에 없습니다.`);
       }
@@ -128,11 +129,21 @@ async function main() {
       targetBrand: TARGET_BRAND || null,
       targetResult,
       brandRankingTop20: brandList.slice(0, 20),
+      allProducts: allItems.map((item, idx) => ({
+        rank: idx + 1,
+        brand: extractBrand(item),
+        title: cleanTitle(item.title),
+        price: item.lprice,
+        link: item.link,
+      })),
       totalProducts: allItems.length,
       collectedAt: new Date().toISOString()
     };
 
-    fs.writeFileSync(path.join(outDir, 'ranking.json'), JSON.stringify(result, null, 2));
+    fs.writeFileSync(
+      path.join(outDir, 'ranking.json'),
+      JSON.stringify(result, null, 2)
+    );
     console.log('\n결과 저장 완료: output/ranking.json');
 
   } catch (e) {
