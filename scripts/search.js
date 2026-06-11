@@ -38,7 +38,11 @@ function naverSearch(query, start = 1, display = 100) {
 }
 
 function cleanTitle(title) {
-  return title.replace(/<[^>]*>/g, '').trim();
+  return title
+    .replace(/<[^>]*>/g, '')
+    .replace(/[^\uAC00-\uD7A3\u0020-\u007E\u3040-\u30FF\u4E00-\u9FFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function escapeCSV(val) {
