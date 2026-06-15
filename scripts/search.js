@@ -107,18 +107,18 @@ async function main() {
     const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
     const dateStr = kst.toISOString().slice(0, 10);
 
-    // 오늘 수집 데이터 맵
+    // 오늘 수집 데이터 맵 (순수 값만 저장, escape는 출력 시에만 적용)
     const todayMap = {};
     allItems.forEach((item, idx) => {
       const title = cleanTitle(item.title);
       const brand = item.brand || item.mallName || '';
-      const key = escapeCSV(title) + '|' + escapeCSV(brand);
+      const key = title + '|' + brand;
       todayMap[key] = {
         rank: idx + 1,
-        title: escapeCSV(title),
-        brand: escapeCSV(brand),
+        title: title,
+        brand: brand,
         price: item.lprice,
-        link: escapeCSV(item.link)
+        link: item.link
       };
     });
 
@@ -177,10 +177,10 @@ async function main() {
       }
     });
 
-    // CSV 저장 (BOM 추가로 엑셀 한글 깨짐 방지)
+    // CSV 저장 (BOM 추가로 엑셀 한글 깨짐 방지, escape는 출력 시에만 적용)
     const csvContent = [
-      headers.join(','),
-      ...Object.values(rows).map(r => r.join(','))
+      headers.map(h => escapeCSV(h)).join(','),
+      ...Object.values(rows).map(r => r.map(v => escapeCSV(v)).join(','))
     ].join('\n');
 
     fs.writeFileSync(csvFile, '\uFEFF' + csvContent);
