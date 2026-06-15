@@ -111,7 +111,7 @@ async function main() {
     const todayMap = {};
     allItems.forEach((item, idx) => {
       const title = cleanTitle(item.title);
-      const brand = item.brand || item.mallName || '';
+      const brand = cleanTitle(item.brand || item.mallName || '');
       const key = title + '|' + brand;
       todayMap[key] = {
         rank: idx + 1,
