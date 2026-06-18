@@ -39,6 +39,7 @@ function naverSearch(query, start = 1, display = 100) {
 
 function cleanTitle(title) {
   return title
+    .normalize('NFC') // NFD 분해형 한글 자모 제거 방지
     .replace(/<[^>]*>/g, '')
     .replace(/\uFFFD/g, '')
     .replace(/[\uD800-\uDFFF]/g, '')
