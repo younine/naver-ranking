@@ -74,6 +74,12 @@ function parseCSVLine(line) {
   return result;
 }
 
+// link(네이버 catalog ID)를 우선 매칭 키로 사용, 없으면 title+brand로 대체
+// (네이버가 가격비교명을 바꿔도 link는 안정적이라 같은 상품을 계속 같은 행으로 추적 가능)
+function rowKey(title, brand, link) {
+  return link ? link : title + '|' + brand;
+}
+
 function parseCSV(content) {
   const lines = content.trim().split('\n');
   const headers = parseCSVLine(lines[0]);
@@ -81,7 +87,7 @@ function parseCSV(content) {
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
     const cols = parseCSVLine(lines[i]);
-    const key = cols[0] + '|' + cols[1];
+    const key = rowKey(cols[0], cols[1], cols[3]);
     rows[key] = cols;
   }
   return { headers, rows };
@@ -113,7 +119,7 @@ async function main() {
     allItems.forEach((item, idx) => {
       const title = cleanTitle(item.title);
       const brand = cleanTitle(item.brand || item.mallName || '');
-      const key = title + '|' + brand;
+      const key = rowKey(title, brand, item.link);
       todayMap[key] = {
         rank: idx + 1,
         title: title,
@@ -156,6 +162,8 @@ async function main() {
     Object.keys(rows).forEach(key => {
       while (rows[key].length < headers.length) rows[key].push('');
       if (todayMap[key]) {
+        rows[key][0] = todayMap[key].title;
+        rows[key][1] = todayMap[key].brand;
         rows[key][2] = todayMap[key].price;
         rows[key][3] = todayMap[key].link;
         rows[key][dateColIdx] = todayMap[key].rank;
