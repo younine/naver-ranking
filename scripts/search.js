@@ -147,6 +147,18 @@ async function main() {
       console.log(`기존 데이터 로드: ${Object.keys(rows).length}개 상품`);
     }
 
+    // link 매칭 실패 시 title 완전일치로 재매칭 (카탈로그ID가 옵션별로 바뀌어도 같은 상품으로 추적, link 우선 매칭 로직 자체는 그대로 둠)
+    const titleToKey = {};
+    Object.keys(rows).forEach(key => { titleToKey[rows[key][0]] = key; });
+    Object.keys(todayMap).forEach(key => {
+      if (rows[key]) return;
+      const matchKey = titleToKey[todayMap[key].title];
+      if (matchKey && !todayMap[matchKey]) {
+        todayMap[matchKey] = todayMap[key];
+        delete todayMap[key];
+      }
+    });
+
     // 날짜 컬럼을 고정 컬럼 바로 뒤(index 4)에 삽입 (최신이 앞)
     if (!headers.includes(dateStr)) {
       headers.splice(FIXED_COLS, 0, dateStr);
